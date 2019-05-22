@@ -9,7 +9,7 @@ library(LaplacesDemon)
 
 
 
-# Cap韙ulo 2: Introducci髇 al pensamiento Bayesiano -----------------------
+# Cap铆tulo 2: Introducci贸n al pensamiento Bayesiano -----------------------
 
 Param_previa<-  function(q,p,init, dist){
   previa_optim <- function(param) {
@@ -35,9 +35,9 @@ df <- gather(df,key = "Dist", value = "Densidad", -p)
 ggplot(data=df, aes(x=p, y=Densidad, colour=Dist))+
   geom_line(lwd=1)+
   theme_bw()+
-  ggtitle("Comparaci髇")
+  ggtitle("Comparaci贸n")
 
-# Distribuci髇 predictiva
+# Distribuci贸n predictiva
 
 ab=c(a, b)
 m=20; xs=0:20
@@ -58,16 +58,16 @@ df <- gather(df,"Densidad", "Probabilidad_predictiva",-x)
 
 ggplot(data=df, aes(x=x, y=Probabilidad_predictiva, color=Densidad))+
   geom_point()+
-  labs(title=("Probabilidad predictiva del n鷐ero de dormilones"))+
+  labs(title=("Probabilidad predictiva del n煤mero de dormilones"))+
   geom_vline(xintercept = 5, colour="red")+
   facet_wrap(~ Densidad,dir = "v")+
   theme_bw()+
   theme(legend.position="none")
 
 
-# Cap韙ulo 3: Modelos Univariados -----------------------------------------
+# Cap铆tulo 3: Modelos Univariados -----------------------------------------
 
-## Distribuci髇 Normal con media conocida y varianza desconocida
+## Distribuci贸n Normal con media conocida y varianza desconocida
 
 data(footballscores)
 attach(footballscores)
@@ -78,18 +78,18 @@ v <- sum(d^2)
 P <- rchisq(1000, n)/v
 s <- sqrt(1/P)
 
-kable(quantile(s, probs = c(0.025, 0.5, 0.975)), col.names=c("Cuantil"))
+quantile(s, probs = c(0.025, 0.5, 0.975))
 
 ggplot(data.frame(s), aes(x=s))+ 
 geom_histogram(aes(y=..density..),color="darkblue", fill="white")+
 geom_density(alpha=.2, fill="#FF6666")+ 
 theme_bw()+
-labs(x="s", y="Frequencia", title="Histograma de las simulaciones de la desviaci髇 est醤dar")
+labs(x="s", y="Frequencia", title="Histograma de las simulaciones de la desviaci贸n est谩ndar")
 
 
 
 
-## Estimaci髇 de la tasa de mortalidad en trasplantes de coraz髇
+## Estimaci贸n de la tasa de mortalidad en trasplantes de coraz贸n
 
 alpha<-16;beta<-15174
 yobs<-1; ex<-66
@@ -123,7 +123,7 @@ ggplot(lambda, aes(x=value))  +
   theme_bw()
 
 
-## Una ilustraci髇 de la robustez bayesiana
+## Una ilustraci贸n de la robustez bayesiana
 
 res <- Param_previa(c(80,120),c(0.05,0.95),c(1,1),qnorm)
 res
@@ -166,7 +166,7 @@ df <- gather(df,key = "Dist",
 ggplot(data=df, aes(x=Theta, y=Densidad, colour=Dist))+
   geom_line()+
   theme_bw(base_size=18)+
-  ggtitle("Comparaci髇 de previas")+
+  ggtitle("Comparaci贸n de previas")+
   theme(legend.position = "bottom")
 
 summ2 = c()
@@ -199,7 +199,7 @@ df <- gather(df, "Dist", "Densidad_posterior", -Theta,-y)
 ggplot(data=df, aes(x=Theta, y=Densidad_posterior, colour=Dist))+
   geom_line()+
   theme_bw(base_size=14)+
-  ggtitle("Comparaci髇 de posteriores")+
+  ggtitle("Comparaci贸n de posteriores")+
   theme(legend.position = "bottom")+
   facet_wrap(~ y,dir = "h")
 
