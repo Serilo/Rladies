@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+  <head>
+    <title>Introducción a los Modelos Bayesianos con R</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Carolina Montoya Rivera" />
+    <link href="libs/remark-css/default.css" rel="stylesheet" />
+    <link href="libs/remark-css/rladies.css" rel="stylesheet" />
+    <link href="libs/remark-css/rladies-fonts.css" rel="stylesheet" />
+    <script src="libs/htmlwidgets/htmlwidgets.js"></script>
+    <script src="libs/jquery/jquery.min.js"></script>
+    <link href="libs/datatables-css/datatables-crosstalk.css" rel="stylesheet" />
+    <script src="libs/datatables-binding/datatables.js"></script>
+    <link href="libs/dt-core/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="libs/dt-core/css/jquery.dataTables.extra.css" rel="stylesheet" />
+    <script src="libs/dt-core/js/jquery.dataTables.min.js"></script>
+    <link href="libs/crosstalk/css/crosstalk.css" rel="stylesheet" />
+    <script src="libs/crosstalk/js/crosstalk.min.js"></script>
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Introducción a los Modelos Bayesianos con R
+## R-Ladies
+### Carolina Montoya Rivera
+### Actuaria, Instituto Nacional de Seguros
+### 22/05/2019
+
+---
+
+
+background-image: url(https://new.library.arizona.edu/sites/default/files/styles/featured_image/public/featured_media/r-ladies.jpg?itok=Fc3ULV12)
+
+
+
+
+[Stio web: R-LADIES GLOBAL](https://rladies.org/about-us/)
+
+[Rladies xaringan theme](https://alison.rbind.io/post/r-ladies-slides/)
+
+
+---
+
+
+background-image: url(https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1388539298i/1588010._UY475_SS475_.jpg)
+
+
+
+---
+
+class: inverse, center, middle
+
+## Índice 
+
+- Capítulo 1: Introducción a R.
+- **Capítulo 2: Introducción al pensamiento bayesiano.**
+- **Capítulo 3: Modelos Univariados.**
+- Capítulo 4: Modelos Multivariados.
+- Capítulo 5: Introducción a la computación bayesiana.
+- Capítulo 6: Métodos MCMC
+- Capítulo 7: Modelos Jerárquicos.
+- Capítulo 8: Comparación de modelos.
+- Capítulo 9: Modelos de regresión.
+- Capítulo 10: Muestreo de Gibbs.
+- Capítulo 11: R como interfaz de WinBUGS
+
+---
+
+class: inverse, center, middle
+
+# Capítulo 2
+
+---
+
+# Introducción al pensamiento Bayesiano
+
+- La distribución de probabilidad de una variable aleatoria `\(X\)`, es una función que asigna la probabilidad de ocurrencia a cada realización de `\(X\)`.
+
+
+- La idea básica de la estadística bayesiana, consiste en considerar tanto los datos `\(X\)` como los parámetros ( `\(p\)` ) asociados a su distribución como variables aleatorias.
+
+- Supongamos que `\(g(p)\)` contiene la información sobre el parámetro `\(p\)`. Suponga que tenemos un vector de `\(n\)` observaciones `\(\bar{x}=(x_1,x_2, \cdots, x_n)^T\)`.
+La verosimilitud se denota como `\(f(\bar{x}|p)\)` y describe la probabilidad de obtener los valores de `\(\bar{x}\)` dado que `\(p\)` es el parámetro verdadero. Por el teorema de Bayes, la distribución posterior de `\(p\)` es:
+
+`$$g(p|\bar{x})=\dfrac{f(\bar{x}|p)g(p)}{f(\bar{x})}$$`
+- `\(g(p)\)` es la distribución previa y `\(g(p|\bar{x})\)` es la distribución posterior del parámetro `\(p\)` 
+
+---
+
+## Ejemplo: Estimación de una proporción. 
+
+- A una persona se le asigna un estudio donde tiene que determinar:
+&lt;p style="text-align: center;"&gt;
+¿Qué proporción de estudiantes universitarios duerme al menos ocho horas?
+&lt;/p&gt;
+
+- Supongamos que la persona cree que la proporción es igualmente probable que sea menor o mayor que `\(p = 0.3\)`. Además, tiene una confianza del 90% de que `\(p\)` es menor que 0.5.
+
+
+- La distribución beta es útil para modelar proporciones puesto que su dominio está en el intervalo (0,1).
+`$$g(p)=\dfrac{\Gamma(\alpha+\beta)}{\Gamma(\alpha)\Gamma(\beta)}p^{\alpha-1}(1-p)^{\beta-1} \implies g(p)\propto p^{\alpha-1}(1-p)^{\beta-1}$$`
+- ¿Cómo podemos modelar este conocimiento previo del parámetro mediante una distribución beta en R?
+
+
+
+---
+### Ajuste de la previa
+
+- Ocupamos una distribución beta cuyo cuantil al 50% sea 0.3 y al 90% sea 0.5:
+
+
+```r
+Param_previa&lt;-  function(q,p,init, dist) {
+  previa_optim &lt;- function(param) {
+    (dist(p[1],param[1],param[2])-q[1])^2 + (dist(p[2],param[1],param[2])-q[2])^2
+  }
+  r &lt;-  optim(init,previa_optim)
+  r &lt;-  unlist(r)
+  r &lt;-  c(r[1],r[2])
+  return(data.frame(r))
+}
+
+res &lt;- Param_previa(c(0.3,0.5), c(0.5,0.9),c(1,1), qbeta)
+kable(res, format='html')
+```
+
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt;   &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; r &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; par1 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 3.262585 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; par2 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 7.183773 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/br&gt;
+&lt;/br&gt;
+ De aquí vemos que la previa de la distribución es `\(Beta(\alpha=3.26,\beta=7.18)\)`.
+ 
+
+---
+
+ - Se toma una muestra de 27 estudiantes universitarios, de los cuales se observa que 11 reportaron haber dormido al menos 8 horas la noche anterior. ¿Cómo podemos incorporar esta información con nuestro conocimiento previo?
+
+
+- La distribución binomial modela eventos de acierto-desacierto en un experimentos independientes. Supongamos que vemos como éxito el dormir al menos 8 horas. Tomamos una muestra aleatoria de estudiantes con `\(s\)` éxitos y `\(f\)` fallos, entonces la verosimilitud es:
+
+`$$p^s(1-p)^f$$`
+&lt;/br&gt;
+
+- Recordemos que `\(g(p|\bar{x})=\dfrac{f(\bar{x}|p)g(p)}{f(\bar{x})}\)` y `\(g(p)\propto p^{\alpha-1}(1-p)^{\beta-1}\)` luego:
+`$$g(p|\bar{x})\propto p^{\alpha+s-1}(1-p)^{b+f-1}, \text{         donde: } 0&lt;p&lt;1$$`
+
+&lt;/br&gt;
+
+- Es decir, `\(g(p|\bar{x}) \sim Beta(\hat{\alpha}=\alpha+s, \hat{\beta}=\beta+f)\)`. Este es un ejemplo de un análisis conjugado, donde la distribución previa y posterior del parámetro, tienen la misma forma funcional.   
+---
+
+
+
+```r
+  p &lt;-  seq(0, 1, length = 500)
+  a &lt;-  res$r[1]
+  b &lt;-  res$r[2]
+  s = 11
+  f = 16
+  
+  df &lt;- data.frame(p = seq(0, 1, length = 500),
+  Previa= dbeta(p,a,b),
+  Verosimilitud= dbeta(p,s+1,f+1),
+  Posterior= dbeta(p,a+s,b+f))
+ df[1:3,]
+```
+
+```
+##             p       Previa Verosimilitud    Posterior
+## 1 0.000000000 0.0000000000  0.000000e+00 0.000000e+00
+## 2 0.002004008 0.0002956486  7.401509e-22 1.186151e-25
+## 3 0.004008016 0.0014011469  1.467854e-18 1.114834e-21
+```
+
+```r
+  df &lt;- gather(df,
+  key = "Dist",
+  value = "Densidad", -p)
+  
+df[1:3,]
+```
+
+```
+##             p   Dist     Densidad
+## 1 0.000000000 Previa 0.0000000000
+## 2 0.002004008 Previa 0.0002956486
+## 3 0.004008016 Previa 0.0014011469
+```
+
+---
+
+
+```r
+  ggplot(data=df, aes(x=p,y=Densidad,colour=Dist))+
+    geom_line()+
+    theme_bw(base_size=16)+
+    ggtitle("Comparación")
+```
+
+![](Pres_files/figure-html/unnamed-chunk-4-1.png)&lt;!-- --&gt;
+
+
+---
+# Inferencia sobre el parámetro
+
+.pull-left[
+- `\(¿P(p&gt;=0.5)?\)`
+
+```r
+#Usando la distribución teórica
+1-pbeta(0.5, a+s, b+f)
+```
+
+```
+## [1] 0.0692092
+```
+
+
+
+```r
+#Usando simulaciones
+ps &lt;- rbeta(1000,a+s,b+f)
+sum(ps&gt;=0.5)/1000
+```
+
+```
+## [1] 0.059
+```
+
+
+```r
+#Aumentando el número de simulaciones
+ps0 &lt;- rbeta(100000,a+s,b+f)
+sum(ps0&gt;=0.5)/100000
+```
+
+```
+## [1] 0.06894
+```
+]
+
+.pull-right[
+- ¿Intervalo de confianza?
+
+```r
+#Usando la distribución teórica
+qbeta(c(0.05, 0.95), a + s, b + f)
+```
+
+```
+## [1] 0.2556166 0.5134772
+```
+
+
+
+```r
+#Usando simulaciones
+quantile(ps, c(0.05,0.95))
+```
+
+```
+##        5%       95% 
+## 0.2553770 0.5057156
+```
+
+
+```r
+#Aumentando el número de simulaciones
+quantile(ps0, c(0.05,0.95))
+```
+
+```
+##        5%       95% 
+## 0.2558322 0.5131322
+```
+]
+
+---
+
+# Inferencia sobre el parámetro
+
+.pull-left[
+- ¿Media?
+
+```r
+#Usando la distribución teórica
+(a+s)/((a+s)+(b+f))
+```
+
+```
+## [1] 0.3808804
+```
+
+
+
+```r
+#Usando simulaciones
+sum(ps)/length(ps)
+```
+
+```
+## [1] 0.3807727
+```
+
+
+```r
+#Aumentando el número de simulaciones
+sum(ps0)/length(ps0)
+```
+
+```
+## [1] 0.3810515
+```
+]
+
+.pull-right[
+- ¿Varianza?
+
+```r
+#Usando la distribución teórica
+(a+s)*(b+f)/(((a+s)+(b+f))^2*((a+s)+(b+f)+1))
+```
+
+```
+## [1] 0.006133495
+```
+
+
+
+```r
+#Usando simulaciones
+var(ps)
+```
+
+```
+## [1] 0.005540484
+```
+
+
+```r
+#Aumentando el número de simulaciones
+var(ps0)
+```
+
+```
+## [1] 0.006130453
+```
+]
+
+---
+
+# Inferencia sobre una función del parámetro
+
+- **Monte Carlo**. Queremos calcular:
+
+`$$E(h(p)|{x})=\int h(p)g(p|{x})dp$$`
+
+.pull-left[
+Suponga que se tiene simulada una muestra `\(p^1, p^2, \cdots, p^m\)`. Entonces: 
+`$$\bar{h} = \dfrac{\sum_{j=1}^{m}h(p^j)}{m}$$`
+
+- ¿Media de `\(p^2\)`?
+
+```r
+est=mean(ps0^2) 
+est
+```
+
+```
+## [1] 0.1513306
+```
+
+]
+
+.pull-right[
+
+
+El error estándar asociado a este parámetro es:
+
+`$$se_{\bar{h}}=\sqrt{\dfrac{\sum_{j=1}^{m}(h(p^j)-\bar{h})}{m(m-1)}}$$`
+
+- ¿Varianza?
+
+```r
+se=sd(ps0^2)/sqrt(1000)
+se
+```
+
+```
+## [1] 0.001934
+```
+
+]
+---
+## Predicción
+
+- También nos interesa conocer la cantidad de estudiantes dormilones en una muestra futura. La densidad predictiva de `\(\tilde{y}\)` está dada por:
+
+`$$f(\tilde{x})=\int f(\tilde{x}|p)g(p)dp$$`
+Si `\(g\)` es la dist. previa, entonces nos referimos a `\(f\)` como la densidad predictiva previa, mientras que si `\(g\)` es la dist. posterior, `\(f\)` es la densidad predictiva posterior. 
+
+- En este caso particular, se puede calcular analíticamente la siguiente expresión cerrada para la densidad posterior:
+
+`$$f(\tilde{x})=\int f_{B}(\tilde{y}|m,p)g(p)dp = {m\choose \tilde{x}}\dfrac{B(a+\tilde{x}, b+m-\tilde{x})}{B(a,b)}$$`
+&lt;/br&gt;
+Donde `\(g\sim Beta(3.26,7.18)\)`, `\(f\sim Binomial(m,p)\)` y `\(\tilde{x}=0,\cdots,m\)`.
+
+---
+.pull-left[
+
+```r
+ab=c(a, b)
+m=20; xs=0:20
+pred=pbetap(ab, m, xs)
+kable(data.frame(xs=0:9,pred=pred[1:10]), format='html')
+```
+
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:right;"&gt; xs &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; pred &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0180389 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0449541 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 2 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0722845 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 3 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0943781 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1083502 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 5 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1135104 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 6 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1106848 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 7 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1015893 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 8 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0883129 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 9 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0729318 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+]
+
+.pull-right[
+
+```r
+kable(data.frame(xs=10:20,
+      pred=pred[11:21]),
+      format='html')
+```
+
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:right;"&gt; xs &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; pred &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0572497 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 11 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0426510 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 12 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0300475 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 13 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0198972 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 14 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0122719 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 15 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0069550 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 16 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0035491 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 17 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0015796 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 18 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0005808 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 19 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0001589 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 20 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0000246 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+]
+
+&lt;/br&gt;
+
+- De acuerdo a esta distribución predictiva, lo más probable es que al tomar una muestra de 20 estudiantes, hayan 5 o 6 dormilones.
+
+---
+# Usando simulaciones
+
+
+```r
+p=rbeta(10000,a, b)
+x = rbinom(10000, 20, p)
+table(x)
+```
+
+```
+## x
+##    0    1    2    3    4    5    6    7    8    9   10   11   12   13   14 
+##  165  459  748  917 1069 1147 1097 1010  896  745  597  418  276  190  125 
+##   15   16   17   18 
+##   87   29   17    8
+```
+
+
+```r
+freq=table(x)
+xs=c(0:max(x))
+predprob=freq/sum(freq)
+predprob
+```
+
+```
+## x
+##      0      1      2      3      4      5      6      7      8      9 
+## 0.0165 0.0459 0.0748 0.0917 0.1069 0.1147 0.1097 0.1010 0.0896 0.0745 
+##     10     11     12     13     14     15     16     17     18 
+## 0.0597 0.0418 0.0276 0.0190 0.0125 0.0087 0.0029 0.0017 0.0008
+```
+
+```r
+df &lt;- data.frame(x=0:(length(predprob)-1),Pred_sim=as.vector(predprob), Pred_teo=pred[0:length(predprob)])
+df &lt;- gather(df,"Densidad", "Probabilidad_predictiva",-x)
+```
+---
+
+
+```r
+ggplot(data=df, aes(x=x, y=Probabilidad_predictiva, color=Densidad))+
+  geom_point(lwd=1.5)+
+  labs(x="x", y="Probabilidad predictiva",title=("Probabilidad predictiva del número de dormilones"))+
+  geom_vline(xintercept = 5, colour="red")+
+  facet_wrap(~ Densidad,dir = "v")+
+  theme_bw(base_size=16)+
+  theme(legend.position="none")
+```
+
+![](Pres_files/figure-html/unnamed-chunk-23-1.png)&lt;!-- --&gt;
+
+---
+class: center, middle
+
+## Links de interés (teórico)
+
+[Familias exponenciales](http://halweb.uc3m.es/esp/Personal/personas/mwiper/docencia/English/PhD_Bayesian_Statistics/ch3_2009.pdf)
+
+[Tabla con previas conjugadas](https://www2.stat.duke.edu/courses/Fall11/sta114/conjug.pdf)
+---
+class: inverse, middle, center
+
+# Capítulo 3
+
+---
+
+# Modelos univariados:
+
+- Distribución Normal con media conocida y varianza desconocida:
+
+
+
+
+```r
+data(footballscores)
+DT::datatable(
+  head(footballscores, 20),
+  fillContainer = FALSE, options = list(pageLength = 3, scrollX = TRUE)
+)
+```
+
+<div id="htmlwidget-638c97d5ae9d25262d55" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-638c97d5ae9d25262d55">{"x":{"filter":"none","fillContainer":false,"data":[["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20"],[1981,1981,1981,1981,1981,1981,1981,1981,1981,1981,1981,1981,1981,1981,1981,1981,1981,1981,1981,1981],[1,1,1,1,1,0,1,1,0,1,0,0,1,1,1,0,0,1,1,0],[21,27,31,9,27,26,24,20,20,28,7,24,33,14,30,31,35,3,30,10],[13,0,0,16,21,10,17,27,7,29,9,10,37,44,10,17,3,9,17,13],[2,9.5,4,4,4.5,2,5,6,1,6.5,2.5,6,9.5,2,2,4.5,2.5,3.5,10.5,1],["TB","ATL","BUF","CHI","CIN","DAL","DET","LAN","MIA","NE","LAA","PHA","PIT","CLE","MIA","ATL","BUF","CLE","DAL","DEN"],["MIN","NO","NYJ","GB","SEA","WAS","SF","HOU","PHX","IND","DEN","NYG","KC","SD","PIT","GB","IND","HOU","PHX","SEA"],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>year<\/th>\n      <th>home<\/th>\n      <th>favorite<\/th>\n      <th>underdog<\/th>\n      <th>spread<\/th>\n      <th>favorite.name<\/th>\n      <th>underdog.name<\/th>\n      <th>week<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":3,"scrollX":true,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4,5,8]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[3,10,25,50,100]}},"evals":[],"jsHooks":[]}</script>
+
+---
+class: middle
+
+- Estamos interesados en estimar la diferencia 
+
+`$$d = favorite - underdog - spread$$`
+
+Si se asume que estas diferencias son `\(N(0,\sigma^2)\)`, entonces la verosimilitud de `\(d\)` está dada por:
+
+`$$(\sigma^2)^{\dfrac{-n}{2}}exp\{-\sum_{i=1}^{n}d_{i}^2/(2\sigma^2)\},\hspace{1cm}  \sigma^2 &gt; 0$$`
+
+- Suponemos la previa no informativa: `\(p(\sigma^2)=\dfrac{1}{\sigma^2}\)`. Entonces:
+
+`$$g(\sigma^2|data)\propto (\sigma^2)^{-n/2-1}exp\{-v/(2\sigma^2)\}$$`
+Donde `\(v=\sum_{i=1}^{n}d_{i}^2\)`.
+
+- Si definimos `\(P=1/\sigma^2\)` se puede mostrar que:
+
+`$$P\sim \tilde{\chi}^n/v$$`
+---
+class: middle
+
+
+```r
+attach(footballscores)
+
+d &lt;- favorite - underdog - spread
+n &lt;- length(d)
+v &lt;- sum(d^2)
+```
+
+Para hacer inferencia sobre `\(\sigma\)` usamos la transformación `\(\sigma=\sqrt{1/P}\)`:
+
+
+```r
+P &lt;- rchisq(1000, n)/v
+s &lt;- sqrt(1/P)
+
+kable(quantile(s, probs = c(0.025, 0.5, 0.975)), col.names=c("Cuantil"), format='html')
+```
+
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt;   &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Cuantil &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 2.5% &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 13.17411 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 50% &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 13.85829 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 97.5% &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.64158 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+Los percentiles al 2.5% y 97.5% forman un intervalo de confianza al 95% para `\(\sigma\)`.
+
+---
+
+
+```r
+ggplot(data.frame(s), aes(x=s))+ 
+geom_histogram(aes(y=..density..),color="darkblue", fill="white")+
+geom_density(alpha=.2, fill="#FF6666")+ 
+theme_bw(base_size=16)+
+labs(title="Histograma de las simulaciones de la desviación estándar")
+```
+
+&lt;img src="Pres_files/figure-html/unnamed-chunk-27-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+## Estimación de la tasa de mortalidad por transplantes de corazón.
+
+- `\(n\)`: Cantidad de cirugías de transplante cardíaco en el hospital `\(X\)`.
+
+- `\(y\)`: Número de muertes observadas.
+
+- `\(e\)`: Exposición.
+
+ `$$y \sim Poisson(e\lambda)$$`
+Donde `\(\lambda\)` es la tasa de mortalidad por unidad de exposición. El objetivo es estimar `\(\lambda\)`.
+
+- El estimador estándar de MLE para `\(\lambda\)` es `\(\hat{\lambda}=y/e\)`. Problema: cuando `\(y\)` es cercano a 0, no es un buen estimador.
+
+- Bajo este contexto, intentaremos una ajuste bayesiano.
+
+---
+
+- Una escogencia conveniente para la distribución de la previa es una distribución miembro de la familia `\(gamma(\alpha, \beta)\)` de la forma:
+
+
+`$$p(\lambda)\propto \lambda^{\alpha-1}exp(-\beta\lambda), \hspace{2 cm} \lambda&gt;0$$`
+
+
+
+- Se observan `\(z_j\)` muertes, con exposición `\(o_j\)`, `\(j=1,\cdots,10\)` (son 10 hospitales). Donde:
+`$$z_j \sim Poisson(o_j\lambda)$$`
+Tomando la previa no informativa `\(p(\lambda)=\lambda^{-1}\)`, la dist. actualizada de `\(\lambda\)` dada esta data es:
+
+`$$p(\lambda)\propto \lambda^{\sum_{j=1}^{10}z_j-1}exp\Bigg(-\Big(\sum_{j=1}^{10}o_j\Big)\lambda\Bigg)$$`
+- Recordemos que para un v.a `\(Z\)` Poisson:
+
+`$$f(k,\lambda)=P(Z=k)=\dfrac{e^{-\lambda}\lambda^k}{k!}$$`
+- Luego `\(\lambda\sim Gamma(\alpha=\sum_{j=1}^{10}z_j=16 , \beta=\sum_{j=1}^{10}o_j=15174)\)`.
+
+---
+class: middle
+
+
+- Si el número de muertes observado de un hospital `\(y_{obs}\)` par aun hospital con exposición `\(e\)`, es `\(Poisson(e\lambda)\)` y se asigna la previa `\(\lambda\sim Gamma(\alpha,\beta)\)`, entonces la distribución posterior tiene la forma: 
+
+`$$p(\lambda)\propto \lambda^{\sum_{j=1}^{10}z_j}exp\Bigg(-\Big(\sum_{j=1}^{10}o_j\Big)\lambda\Bigg)\cdot \lambda^{\alpha-1}exp(-\beta\lambda)$$`
+
+`$$p(\lambda)\propto \lambda^{\sum_{j=1}^{10}z_j+\alpha-1}exp\Bigg(-\Big(\sum_{j=1}^{10}o_j+\beta\Big)\lambda\Bigg)$$`
+Es decir, es una `\(Gamma(\alpha+y_{obs}, \beta+e)\)`
+
+- También podemos calcular la distribución predictiva de `\(y\)`:
+`$$f(y)=\dfrac{f(y|\lambda)g(\lambda)}{g(\lambda|y)}$$`
+
+---
+
+```r
+alpha&lt;-16;beta&lt;-15174
+yobs&lt;-1; ex&lt;-66; y&lt;-0:10; lam&lt;-alpha/beta
+py&lt;-dpois(y, lam*ex)*dgamma(lam, shape = alpha,rate = beta)/dgamma(lam, shape= alpha + y,rate = beta + ex)
+kable(cbind(y, round(py, 3)),format='html')
+```
+
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:right;"&gt; y &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt;  &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.933 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.065 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 2 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.002 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 3 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 5 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 6 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 7 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 8 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 9 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.000 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+```r
+lambdaA &lt;- rgamma(1000, shape = alpha + yobs, rate = beta + ex)
+```
+
+---
+
+
+```r
+ex &lt;- 1767; yobs&lt;-4
+y &lt;- 0:10
+py &lt;- dpois(y, lam * ex) * dgamma(lam, shape = alpha,rate = beta)/dgamma(lam, shape = alpha + y, rate = beta + ex)
+kable(cbind(y, round(py, 3)),format='html')
+```
+
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:right;"&gt; y &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt;  &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.172 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.286 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 2 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.254 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 3 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.159 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.079 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 5 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.033 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 6 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.012 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 7 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.004 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 8 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.001 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 9 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.000 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+```r
+lambdaB &lt;- rgamma(1000, shape = alpha + yobs, rate = beta + ex)
+```
+
+
+---
+class: middle
+
+
+```r
+lambda &lt;- data.frame(lambdaA, lambdaB)
+lambda &lt;- gather(lambda) 
+ 
+grid &lt;- with(lambda, seq(min(value), max(value), length = 1000))
+ 
+gammad &lt;- lambda %&gt;%group_by(key) %&gt;% mutate(
+     value = grid,
+     density = dgamma(grid, alpha, beta))
+
+
+ggplot(lambda, aes(x=value))  + 
+  geom_histogram(aes(y=..density..), color="darkblue", fill="lightblue") + 
+  geom_line(aes(y = density),data=gammad, colour = "red") +
+  facet_wrap(~ key,dir = "v")+
+  theme_bw()
+```
+
+
+---
+
+![](Pres_files/figure-html/unnamed-chunk-33-1.png)&lt;!-- --&gt;
+---
+## Robustez bayesiana
+
+- Hay muchas distribuciones previas que podrían calzar con nuestra información inicial.
+
+- Un análisis bayesiano se dice robusto si la inferencia es insensible a la elección de la previa.
+
+- Supongamos que queremos estimar el IQ de una persona llamada Joe. Creemos que Joe tiene una inteligecia promedio, la media de nuestra previa será 100. Además estamos 90% seguros que su IQ caerá entre 80 y 120.
+
+
+```r
+res &lt;- Param_previa(c(80,120),c(0.05,0.95),c(1,1),qnorm);kable(res,format='html')
+```
+
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt;   &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; r &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; par1 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 100.00364 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; par2 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 12.15611 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+Luego `\(\theta\sim N(100,12.16)\)`
+
+- Joe toma 4 tests. Sus notas son `\(y_1, y_2, y_3,y_4\)`. Asumiendo que `\(y\sim N(\theta,\sigma)\)` con sd conocida `\(\sigma=15\)`, la nota promedio `\(\bar{y}\sim N(\theta,\sigma/\sqrt{4})\)`.
+
+
+
+---
+
+- Tomando la previa normal, la posterior también será normal con los siguientes parámetros:
+
+.pull-left[
+`$$\tau_1=1/\sqrt{4/\sigma^2+1/\tau^2}$$`
+]
+.pull-right[
+`$$\mu_1=\dfrac{\bar{y}(4/\sigma^2)+\mu(1/\tau^2)}{4/\sigma^2+1/\tau^2}$$`
+]
+
+Vamos a calcular la distribución posterior bajo 3 escenarios de nota promedio observada: `\(\bar{y}=110,\bar{y}=125,\bar{y}=140\)`.
+
+
+```r
+mu &lt;- res$r[1]; tau &lt;- res$r[2] 
+sigma &lt;- 15 
+n&lt;-4
+se &lt;- sigma/sqrt(4)
+ybar &lt;- c(110, 125, 140)
+tau1 &lt;- 1/sqrt(1/se^2 + 1/tau^2)
+mu1 &lt;- (ybar/se^2 + mu/tau^2)*tau1^2
+summ1 &lt;- cbind(ybar, mu1, tau1)
+kable(summ1, format='html')
+```
+
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:right;"&gt; ybar &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; mu1 &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; tau1 &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 110 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 107.2439 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 6.382905 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 125 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 118.1083 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 6.382905 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 140 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 128.9727 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 6.382905 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+---
+- Consideremos ahora otra previa. Una t-student con parámetro de localización y escala `\((\mu, \tau)\)`
+
+`$$p(\theta|v,\mu, \tau)=\dfrac{\Gamma\Big(\dfrac{v+1}{2}\Big)}{\Gamma\Big(\dfrac{v}{2}\Big)\cdot \sqrt{\pi v\tau}}\Bigg(1+\dfrac{1}{v}\Bigg(\dfrac{\theta-\mu}{\tau}\Bigg)^2\Bigg)^{-{(v+1)}/{2}}$$`
+
+
+```r
+Param_previa_ts &lt;-  function(q,p,init) {
+  previa_optim &lt;- function(param) {
+    (qst(p=p[1],mu=param[1],sigma=param[2],nu=2)-q[1])^2 + (qst(p=p[2],mu=param[1],sigma=param[2],nu=2)-q[2])^2
+  }
+  r &lt;-  optim(init,previa_optim)
+  r &lt;-  unlist(r)
+  r &lt;-  c(r[1],r[2])
+  return(data.frame(r))
+}
+
+rest &lt;- Param_previa_ts(c(80,120),c(0.05,0.95),c(1,1))
+kable(rest, format='html')
+```
+
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt;   &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; r &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; par1 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 99.993578 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; par2 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 6.850288 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+---
+.pull-left[
+
+```r
+theta &lt;-  seq(60, 140, length = 200)
+
+mu &lt;- rest$r[1]
+tscale &lt;-  rest$r[2]
+ 
+df &lt;- data.frame(Theta=seq(60, 140, length = 200),
+                 tstudent=1/tscale*dt((theta-mu)/tscale,2),
+                 normal=1/10*dnorm((theta-mu)/tau))
+df &lt;- gather(df,key = "Dist",
+             value = "Densidad",
+             -Theta)
+
+ggplot(data=df, aes(x=Theta, y=Densidad, colour=Dist))+
+  geom_line()+
+  theme_bw(base_size=18)+
+  ggtitle("Comparación de previas")+
+  theme(legend.position = "bottom")
+```
+]
+
+.pull-right[
+![](Pres_files/figure-html/plot-label-out-1.png)&lt;!-- --&gt;
+]
+
+---
+
+# Cálculo de la distribución posterior
+
+- Haremos el cálculo de la posterior usando las dos previas:
+`$$g(\theta|data) \propto \phi(\bar{y}|\theta,\sigma/\sqrt{n})g_T(\theta|v,\nu,\tau)$$`
+
+
+```r
+summ2 = c()
+postts &lt;- matrix(nrow=500,ncol=3)
+for(i in 1:3){
+  theta = seq(60, 180, length = 500)
+  like = dnorm((theta - ybar[i])/7.5)
+  prior = dt((theta - mu)/tscale, 2)
+  post = prior * like
+  post = post/sum(post)
+  postts[,i] &lt;-post 
+  m = sum(theta * post)
+  s = sqrt(sum(theta^2 * post) - m^2)
+  summ2 = rbind(summ2, c(ybar[i], m, s))
+}
+
+postts &lt;- cbind(c(rep(110,500),rep(125,500),rep(140,500)),c(postts[,1:3]))
+
+normpost = matrix(nrow=500,ncol=3)
+normpost = sapply(1:3, function(i) normpost[,i] = dnorm(theta, mu1[i], tau1)/sum(dnorm(theta, mu1[i], tau1)))
+normpost &lt;- cbind(c(rep(110,500),rep(125,500),rep(140,500)),c(normpost[,1:3]))
+```
+
+---
+class:  middle
+
+```r
+moments &lt;- data.frame(round(summ1,2),round(summ2[,-1],2))
+names(moments) &lt;- c("y","E_n", "Sd_n", "E_ts","Sd_ts")
+kable(moments,format='html')
+```
+
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:right;"&gt; y &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; E_n &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Sd_n &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; E_ts &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Sd_ts &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 110 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 107.24 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 6.38 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 105.29 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 5.84 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 125 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 118.11 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 6.38 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 118.09 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 7.89 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 140 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 128.97 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 6.38 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 135.41 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 7.97 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+
+```r
+df &lt;- data.frame(Theta=rep(seq(60, 180, length = 500),6), Tstudent_post=postts[,2],Normal_post=normpost[,2], y=c(rep(110,500),rep(125,500),rep(140,500)))
+df &lt;- gather(df, "Dist", "Densidad_posterior", -Theta,-y)
+
+ggplot(data=df, aes(x=Theta, y=Densidad_posterior, colour=Dist))+
+  geom_line()+
+  theme_bw(base_size=14)+
+  ggtitle("Comparación de posteriores")+
+  theme(legend.position = "bottom")+
+  facet_wrap(~ y,dir = "h")
+```
+
+---
+
+![](Pres_files/figure-html/unnamed-chunk-40-1.png)&lt;!-- --&gt;
+---
+class: center, middle
+
+# ¡Gracias!
+
+Esta presentación fue creada mediante [**xaringan**](https://github.com/yihui/xaringan).
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
